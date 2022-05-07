@@ -1084,6 +1084,9 @@ static void rt_getcontext(ucontext_t *uc, rt_context *rc)
 #elif defined(__aarch64__)
     rc->ip = uc->uc_mcontext.pc;
     rc->fp = uc->uc_mcontext.regs[29];
+#elif defined(__riscv) && defined(__FreeBSD__)
+    rc->ip = uc->uc_mcontext.mc_gpregs.gp_sepc;
+    rc->fp = uc->uc_mcontext.mc_gpregs.gp_s[0];
 #elif defined(__riscv) && defined(__OpenBSD__)
     rc->ip = uc->sc_sepc;
     rc->fp = uc->sc_s[0];

@@ -228,7 +228,7 @@ case "$cpu" in
   s390)
     cpu="s390"
   ;;
-  riscv64)
+  riscv|riscv64)
     cpu="riscv64"
   ;;
   *)
