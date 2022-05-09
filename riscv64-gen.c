@@ -410,6 +410,9 @@ ST_FUNC void store(int r, SValue *sv)
        ptrreg, rr, fc);                                   // RR, fc(base)
 }
 
+// Can be any arbitrary hex for upper 5 hex digits
+static const int32_t CFI_MARKER = 0xC3615037; // lui zero, 0xC3615
+
 static void gcall_or_jmp(int docall)
 {
     int tr = docall ? 1 : 5; // ra or t0
@@ -420,13 +423,24 @@ static void gcall_or_jmp(int docall)
                 R_RISCV_CALL_PLT, (int)vtop->c.i);
         o(0x17 | (tr << 7));   // auipc TR, 0 %call(func)
         EI(0x67, 0, tr, tr, 0);// jalr  TR, r(TR)
-    } else if (vtop->r < VT_CONST) {
-        int r = ireg(vtop->r);
-        EI(0x67, 0, tr, r, 0);      // jalr TR, 0(R)
     } else {
-        int r = TREG_RA;
-        load(r, vtop);
+        int r;
+        if (vtop->r < VT_CONST) {
+            r = vtop->r;
+        } else {
+            r = TREG_RA;
+            load(r, vtop);
+        }
         r = ireg(r);
+
+        // CFI
+        o(0x37 | (6 << 7) | ((0x800 + CFI_MARKER) & 0xfffff000)); // lui t1, hi(CFI_MARKER)
+        EI(0x13, 0, 6, 6, CFI_MARKER & 0xfff);                    // addi t1, t1, lo(CFI_MARKER)
+        EI(0x03, 2, 7, r, 0);                                     // lw t2, 0(R)
+        // (Note: beq offset computation is more complex than shown here)
+        o(0x63 | (6 << 15) | (7 << 20) | (8 << 7));               // beq t1, t2, +8
+        o(0x73 | (1 << 20));                                      // ebreak
+
         EI(0x67, 0, tr, r, 0);      // jalr TR, 0(R)
     }
 }
@@ -778,6 +792,9 @@ ST_FUNC void gfunc_prolog(Sym *func_sym)
     int areg[2];
     Sym *sym;
     CType *type;
+
+    // CFI
+    o(CFI_MARKER);
 
     sym = func_type->ref;
     loc = -16; // for ra and s0
