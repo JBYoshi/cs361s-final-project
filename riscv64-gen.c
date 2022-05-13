@@ -434,12 +434,27 @@ static void gcall_or_jmp(int docall)
         r = ireg(r);
 
         // CFI
-        o(0x37 | (6 << 7) | ((0x800 + CFI_MARKER) & 0xfffff000)); // lui t1, hi(CFI_MARKER)
-        EI(0x13, 0, 6, 6, CFI_MARKER & 0xfff);                    // addi t1, t1, lo(CFI_MARKER)
-        EI(0x03, 2, 7, r, 0);                                     // lw t2, 0(R)
-        // (Note: beq offset computation is more complex than shown here)
-        o(0x63 | (6 << 15) | (7 << 20) | (8 << 7));               // beq t1, t2, +8
-        o(0x73 | (1 << 20));                                      // ebreak
+        o(0x37 | (6 << 7) | ((0x800 + CFI_MARKER) & 0xfffff000));   // lui t1, hi(CFI_MARKER)
+        EI(0x13, 0, 6, 6, CFI_MARKER & 0xfff);                      // addi t1, t1, lo(CFI_MARKER)
+        EI(0x03, 2, 7, r, 0);                                       // lw t2, 0(R)
+        o(0x63 | (6 << 15) | (7 << 20) | (1 << 10) | (1 << 26));    // beq t1, t2, +72
+        o(0x37 | (6 << 7) | (0xe17 << 12));                         // lui t1, 0xe17
+        ER(0x13, 1, 6, 6, 20, 0);                                   // slli t1, t1, 20
+        EI(0x03, 2, 7, r, 0);                                       // lw t2, 0(R)
+        ER(0x13, 1, 7, 7, 20, 0);                                   // slli t2, t2, 20
+        o(0x63 | (6 << 15) | (7 << 20) | (8 << 7));                 // beq t1, t2, +8
+        o(0x73 | (1 << 20));                                        // ebreak
+        o(0x37 | (6 << 7) | (0xe3e03 << 12));                       // lui t1, 0xe3e03
+        ER(0x13, 1, 6, 6, 12, 0);                                   // slli t1, t1, 20
+        EI(0x03, 2, 7, r, 4);                                       // lw t2, 4(R)
+        ER(0x13, 1, 7, 7, 12, 0);                                   // slli t2, t2, 20
+        o(0x63 | (6 << 15) | (7 << 20) | (8 << 7));                 // beq t1, t2, +8
+        o(0x73 | (1 << 20));                                        // ebreak
+        o(0x37 | (6 << 7) | (0xe0367 << 12));                       // lui t1, 0xe0367
+        ER(0x13, 5, 6, 6, 12, 0);                                   // srli t1, t1, 12
+        EI(0x03, 2, 7, r, 8);                                       // lw t2, 4(R)
+        o(0x63 | (6 << 15) | (7 << 20) | (8 << 7));                 // beq t1, t2, +8
+        o(0x73 | (1 << 20));                                        // ebreak
 
         EI(0x67, 0, tr, r, 0);      // jalr TR, 0(R)
     }
